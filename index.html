@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>NEXUS-OT — Unified Asset & Operations Brain</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14171A;
+    --panel:#1B1F23;
+    --panel-alt:#20252A;
+    --border:#2B3238;
+    --border-bright:#3A434B;
+    --text:#E8E6E1;
+    --text-dim:#8D959C;
+    --text-dimmer:#5E666D;
+    --accent:#4A93BE;
+    --accent-soft:rgba(74,147,190,0.14);
+    --amber:#D98E3F;
+    --amber-soft:rgba(217,142,63,0.14);
+    --success:#5C8A6B;
+    --success-soft:rgba(92,138,107,0.14);
+    --danger:#C6553E;
+    --font-display:'Oswald',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-body);height:100%;}
+  #root{display:flex;flex-direction:column;height:100vh;min-height:640px;}
+
+  /* ---- Top status bar ---- */
+  .topbar{
+    display:flex;align-items:center;gap:18px;
+    padding:12px 20px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#1D2226,#181C1F);
+    flex-shrink:0;
+  }
+  .wordmark{display:flex;align-items:center;gap:10px;}
+  .wordmark .mark{
+    width:30px;height:30px;border:2px solid var(--accent);border-radius:3px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--accent);
+    position:relative;
+  }
+  .wordmark .mark::after{
+    content:'';position:absolute;top:-4px;right:-4px;width:6px;height:6px;border-radius:50%;
+    background:var(--amber);box-shadow:0 0 6px var(--amber);animation:pulse 2s infinite;
+  }
+  .wordmark h1{font-family:var(--font-display);font-weight:600;font-size:19px;letter-spacing:0.5px;margin:0;}
+  .wordmark span{color:var(--text-dimmer);font-family:var(--font-mono);font-size:11px;letter-spacing:1px;margin-left:2px;}
+  .status-pills{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap;}
+  .pill{
+    font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+    border:1px solid var(--border-bright);padding:5px 10px;border-radius:20px;
+    display:flex;align-items:center;gap:6px;background:var(--panel-alt);
+  }
+  .pill b{color:var(--text);font-weight:600;}
+  .pill.warn{border-color:rgba(217,142,63,0.4);color:var(--amber);}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--success);}
+  .dot.warn{background:var(--amber);box-shadow:0 0 6px var(--amber);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+  /* ---- Body layout ---- */
+  .body{display:flex;flex:1;min-height:0;}
+  .nav{
+    width:180px;flex-shrink:0;border-right:1px solid var(--border);
+    background:var(--panel);padding:16px 0;
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:12px 18px;
+    font-family:var(--font-mono);font-size:12px;letter-spacing:0.5px;color:var(--text-dim);
+    cursor:pointer;border-left:2px solid transparent;transition:all .15s;
+  }
+  .nav-item .idx{color:var(--text-dimmer);}
+  .nav-item:hover{color:var(--text);background:var(--panel-alt);}
+  .nav-item.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);}
+  .nav-item .badge{
+    margin-left:auto;background:var(--amber-soft);color:var(--amber);font-size:10px;
+    padding:1px 6px;border-radius:10px;
+  }
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);}
+  .view{display:none;flex:1;min-height:0;flex-direction:column;}
+  .view.active{display:flex;}
+
+  .view-header{padding:16px 24px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .view-header h2{font-family:var(--font-display);font-size:16px;font-weight:600;margin:0 0 3px;letter-spacing:0.3px;}
+  .view-header p{margin:0;font-size:12.5px;color:var(--text-dim);}
+
+  /* ---- Copilot ---- */
+  .chat-wrap{flex:1;min-height:0;display:flex;flex-direction:column;}
+  .chat-log{flex:1;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:14px;}
+  .msg{max-width:78%;font-size:13.5px;line-height:1.55;}
+  .msg.user{align-self:flex-end;}
+  .msg.bot{align-self:flex-start;}
+  .msg-bubble{padding:12px 14px;border-radius:8px;border:1px solid var(--border);}
+  .msg.user .msg-bubble{background:var(--accent-soft);border-color:rgba(74,147,190,0.35);}
+  .msg.bot .msg-bubble{background:var(--panel-alt);}
+  .msg-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-dimmer);margin-bottom:5px;letter-spacing:0.5px;}
+  .citations{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+  .cite{
+    font-family:var(--font-mono);font-size:10.5px;color:var(--accent);
+    border:1px solid rgba(74,147,190,0.35);padding:3px 8px;border-radius:4px;
+    cursor:pointer;background:rgba(74,147,190,0.06);
+  }
+  .cite:hover{background:var(--accent-soft);}
+  .cite.flagged{color:var(--amber);border-color:rgba(217,142,63,0.4);background:var(--amber-soft);}
+  .typing{display:flex;gap:4px;padding:4px 0;}
+  .typing span{width:5px;height:5px;border-radius:50%;background:var(--text-dimmer);animation:blink 1.2s infinite;}
+  .typing span:nth-child(2){animation-delay:.2s;} .typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,100%{opacity:.25;}50%{opacity:1;}}
+
+  .suggestions{display:flex;flex-wrap:wrap;gap:8px;padding:0 24px 14px;flex-shrink:0;}
+  .sugg{
+    font-size:11.5px;font-family:var(--font-mono);color:var(--text-dim);
+    border:1px solid var(--border-bright);padding:6px 11px;border-radius:16px;cursor:pointer;background:var(--panel-alt);
+  }
+  .sugg:hover{color:var(--text);border-color:var(--accent);}
+
+  .chat-input-row{display:flex;gap:10px;padding:14px 24px;border-top:1px solid var(--border);flex-shrink:0;background:var(--panel);}
+  .chat-input-row input{
+    flex:1;background:var(--panel-alt);border:1px solid var(--border-bright);border-radius:6px;
+    color:var(--text);padding:11px 13px;font-size:13.5px;font-family:var(--font-body);outline:none;
+  }
+  .chat-input-row input:focus{border-color:var(--accent);}
+  .chat-input-row button{
+    background:var(--accent);color:#0E1214;border:none;border-radius:6px;padding:0 20px;
+    font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:0.5px;cursor:pointer;
+  }
+  .chat-input-row button:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* ---- source drawer ---- */
+  .drawer{
+    position:absolute;right:0;top:0;bottom:0;width:340px;background:var(--panel);
+    border-left:1px solid var(--border-bright);transform:translateX(100%);transition:transform .2s ease;
+    display:flex;flex-direction:column;z-index:20;
+  }
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;}
+  .drawer-head h3{margin:0 0 3px;font-family:var(--font-display);font-size:14px;}
+  .drawer-head p{margin:0;font-size:11px;color:var(--text-dim);font-family:var(--font-mono);}
+  .drawer-close{cursor:pointer;color:var(--text-dim);font-size:18px;line-height:1;background:none;border:none;}
+  .drawer-body{padding:14px 16px;overflow-y:auto;font-size:12.5px;line-height:1.6;color:var(--text-dim);}
+  .drawer-body p{margin:0 0 10px;}
+
+  /* ---- Graph view ---- */
+  .graph-area{flex:1;display:flex;min-height:0;position:relative;}
+  .graph-svg-wrap{flex:1;overflow:hidden;position:relative;}
+  .graph-detail{
+    width:300px;flex-shrink:0;border-left:1px solid var(--border);padding:16px;overflow-y:auto;background:var(--panel);
+  }
+  .graph-detail h3{font-family:var(--font-display);font-size:14px;margin:0 0 4px;}
+  .graph-detail .type-tag{
+    font-family:var(--font-mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;
+  }
+  .graph-detail .desc{font-size:12.5px;color:var(--text-dim);line-height:1.6;margin:10px 0;}
+  .graph-detail .links{margin-top:14px;}
+  .graph-detail .links h4{font-size:11px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 8px;font-family:var(--font-mono);}
+  .graph-detail .link-item{
+    font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:5px;margin-bottom:6px;
+    color:var(--text-dim);background:var(--panel-alt);cursor:pointer;
+  }
+  .graph-detail .link-item:hover{border-color:var(--accent);color:var(--text);}
+  .legend{display:flex;gap:14px;padding:10px 24px;border-top:1px solid var(--border);flex-wrap:wrap;flex-shrink:0;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);font-family:var(--font-mono);}
+  .legend-swatch{width:9px;height:9px;border-radius:50%;}
+
+  .gnode{cursor:pointer;}
+  .gnode circle{stroke-width:1.5;transition:all .15s;}
+  .gnode:hover circle{filter:brightness(1.3);}
+  .gnode text{font-family:var(--font-mono);font-size:9.5px;fill:var(--text);pointer-events:none;}
+  .gnode .sub{fill:var(--text-dimmer);font-size:8px;}
+  .gedge{stroke:var(--border-bright);stroke-width:1.2;}
+  .gedge.gap{stroke:var(--amber);stroke-dasharray:4 3;stroke-width:1.6;}
+  .gedge-label{font-family:var(--font-mono);font-size:8px;fill:var(--text-dimmer);}
+  .pulse-ring{fill:none;stroke:var(--amber);stroke-width:1.5;opacity:0;animation:ring 2.4s infinite;}
+  @keyframes ring{0%{r:14;opacity:0.7;}100%{r:26;opacity:0;}}
+
+  /* ---- Compliance view ---- */
+  .comp-wrap{flex:1;overflow-y:auto;padding:18px 24px;}
+  table.comp{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.comp th{
+    text-align:left;font-family:var(--font-mono);font-size:10.5px;color:var(--text-dimmer);
+    text-transform:uppercase;letter-spacing:0.6px;padding:8px 10px;border-bottom:1px solid var(--border-bright);
+  }
+  table.comp td{padding:12px 10px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text-dim);}
+  table.comp td.proc{color:var(--text);font-weight:500;}
+  .status-chip{
+    font-family:var(--font-mono);font-size:10.5px;padding:3px 9px;border-radius:12px;display:inline-block;
+  }
+  .status-chip.gap{background:var(--amber-soft);color:var(--amber);}
+  .status-chip.ok{background:var(--success-soft);color:var(--success);}
+  .comp-summary{
+    display:flex;gap:14px;padding:14px 24px 0;flex-shrink:0;
+  }
+  .comp-card{
+    flex:1;border:1px solid var(--border);border-radius:8px;padding:14px 16px;background:var(--panel-alt);
+  }
+  .comp-card .num{font-family:var(--font-display);font-size:26px;font-weight:600;}
+  .comp-card.warn .num{color:var(--amber);}
+  .comp-card .label{font-size:11px;color:var(--text-dim);font-family:var(--font-mono);margin-top:2px;}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+<div id="root">
+
+  <div class="topbar">
+    <div class="wordmark">
+      <div class="mark">N</div>
+      <h1>NEXUS<span>·OT / UNIFIED ASSET &amp; OPERATIONS BRAIN</span></h1>
+    </div>
+    <div class="status-pills">
+      <div class="pill"><span class="dot"></span>Documents indexed <b id="doc-count">7</b></div>
+      <div class="pill"><span class="dot"></span>Entities linked <b id="ent-count">19</b></div>
+      <div class="pill warn"><span class="dot warn"></span>Open compliance gaps <b>1</b></div>
+      <div class="pill"><span class="dot"></span>Facility <b>Unit-3 Coke Oven Battery</b></div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="nav">
+      <div class="nav-item active" data-view="copilot"><span class="idx">01</span> Knowledge Copilot</div>
+      <div class="nav-item" data-view="graph"><span class="idx">02</span> Knowledge Graph</div>
+      <div class="nav-item" data-view="compliance"><span class="idx">03</span> Compliance Gaps <span class="badge">1</span></div>
+    </div>
+
+    <div class="main" style="position:relative;">
+
+      <!-- ============ COPILOT VIEW ============ -->
+      <div class="view active" id="view-copilot">
+        <div class="view-header">
+          <h2>Expert Knowledge Copilot</h2>
+          <p>Ask anything across maintenance logs, SOPs, OISD guidelines, incident reports &amp; OEM manuals. Every answer is grounded in retrieved source excerpts — no source, no claim.</p>
+        </div>
+        <div class="chat-wrap">
+          <div class="chat-log" id="chat-log"></div>
+          <div class="suggestions" id="suggestions">
+            <div class="sugg" data-q="Why did the gas alarm trigger near GL-12 in February 2025, and is CB-204 currently compliant?">Why did the Feb 2025 gas alarm trigger, and is CB-204 compliant now?</div>
+            <div class="sugg" data-q="What is the gasket replacement interval for the CB-204 blower and when was it last serviced?">CB-204 gasket replacement interval &amp; last service?</div>
+            <div class="sugg" data-q="Does our hot work permit process check for active maintenance windows before approval?">Does our permit process check active maintenance windows?</div>
+          </div>
+          <div class="chat-input-row">
+            <input id="chat-input" type="text" placeholder="Ask about equipment, incidents, procedures, or compliance…" />
+            <button id="chat-send">ASK</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ GRAPH VIEW ============ -->
+      <div class="view" id="view-graph">
+        <div class="view-header">
+          <h2>Unified Knowledge Graph</h2>
+          <p>Equipment, incidents, procedures and regulations — auto-linked from the document corpus. Click any node to inspect its connections and source evidence.</p>
+        </div>
+        <div class="graph-area">
+          <div class="graph-svg-wrap">
+            <svg id="graph-svg" viewBox="0 0 900 520" width="100%" height="100%"></svg>
+          </div>
+          <div class="graph-detail" id="graph-detail">
+            <p style="color:var(--text-dimmer);font-size:12.5px;">Select a node to see its details, links, and source documents.</p>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#4A93BE"></span>Equipment / Asset</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#8B7EC8"></span>Procedure</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#6E7880"></span>Regulation</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#D98E3F"></span>Incident / Flagged</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#5C8A6B"></span>Facility Zone</div>
+        </div>
+      </div>
+
+      <!-- ============ COMPLIANCE VIEW ============ -->
+      <div class="view" id="view-compliance">
+        <div class="view-header">
+          <h2>Compliance &amp; Regulatory Gap Detection</h2>
+          <p>Current procedures cross-checked against OISD / Factory Act requirements and live equipment/maintenance state.</p>
+        </div>
+        <div class="comp-summary">
+          <div class="comp-card warn"><div class="num">1</div><div class="label">OPEN GAP</div></div>
+          <div class="comp-card"><div class="num">3</div><div class="label">PROCEDURES REVIEWED</div></div>
+          <div class="comp-card"><div class="num">2</div><div class="label">REGULATIONS CROSS-CHECKED</div></div>
+          <div class="comp-card"><div class="num">60d</div><div class="label">GASKET REPLACEMENT WINDOW</div></div>
+        </div>
+        <div class="comp-wrap">
+          <table class="comp" id="comp-table"></table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div>
+        <h3 id="drawer-title">Source</h3>
+        <p id="drawer-sub">DOC TYPE</p>
+      </div>
+      <button class="drawer-close" id="drawer-close">&times;</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   SYNTHETIC DOCUMENT CORPUS
+   Fictional plant: "Bhilwara Steel & Alloys Ltd" — Unit-3 Coke Oven Battery
+   Built to demonstrate cross-document reasoning, not real records.
+========================================================= */
+const DOCS = [
+  {
+    id:'doc-maint', title:'Maintenance Log — CB-204 Gas Blower', type:'Maintenance Log', tag:'CB-204',
+    chunks:[
+      "Entry 14-Jan-2025: CB-204 coke oven gas blower showing elevated vibration (6.2 mm/s RMS, threshold 7.5). Bearing housing temperature nominal. No immediate action; flagged for next scheduled inspection.",
+      "Entry 02-Feb-2025: Gasket on CB-204 discharge flange shows early-stage wear during visual check. Replacement not yet due per OEM interval. Logged for tracking.",
+      "Entry 20-Feb-2025: Planned 4-hour maintenance window opened on CB-204 for bearing lubrication, 09:00–13:00. Blower taken to reduced-load mode, not fully isolated."
+    ]
+  },
+  {
+    id:'doc-pid', title:'P&ID Annotation Note — Zone GL-12', type:'Engineering Drawing Note', tag:'GL-12',
+    chunks:[
+      "Gas line GL-12 (coke oven gas, 0.3–0.5 barg) runs 11 metres from CB-204 blower housing to isolation valve V-45, within the designated hazardous gas zone of Unit-3 Coke Oven Battery.",
+      "Isolation valve V-45 is manually operated; no remote shutoff is installed on this line segment as of the last drawing revision (Rev C, 2023)."
+    ]
+  },
+  {
+    id:'doc-sop', title:'SOP-118 — Hot Work & Confined Space Entry Near Gas Lines', type:'Safety SOP', tag:'SOP-118',
+    chunks:[
+      "SOP-118 requires continuous or 30-minute-interval gas testing for any hot work or confined space entry within 15 metres of an active coke oven gas line.",
+      "Permit approval under SOP-118 requires sign-off from the shift safety officer and confirmation that no incompatible simultaneous operations are scheduled in the same zone.",
+      "SOP-118, as currently implemented, does not require the permit system to automatically check the equipment maintenance schedule (e.g. active blower maintenance windows) before issuing a hot work or entry permit in the same zone."
+    ]
+  },
+  {
+    id:'doc-oisd', title:'OISD-STD-118 — Fire Prevention in Coke Oven Batteries', type:'Regulatory Guideline', tag:'OISD-STD-118',
+    chunks:[
+      "OISD-STD-118 mandates continuous gas monitoring in any coke oven battery zone during maintenance, hot work, or confined space activity, regardless of the distance between the maintenance activity and adjacent gas-carrying equipment.",
+      "The standard requires that permit-to-work systems account for concurrent maintenance activity on equipment within the same hazard zone, not only for the specific equipment being worked on."
+    ]
+  },
+  {
+    id:'doc-incident', title:'Near-Miss Incident Report — 20 Feb 2025', type:'Incident Report', tag:'INC-0225',
+    chunks:[
+      "At 10:40 on 20-Feb-2025, a hot work permit was active for pipe insulation repair 9 metres from GL-12. A gas detector alarm triggered at 10:44 (reading 22% LEL) during the same window CB-204 was under a planned maintenance reduced-load state.",
+      "Investigation found the hot work permit had been approved without cross-referencing the CB-204 maintenance window logged in the maintenance system. Gas testing at time of alarm had last been performed 34 minutes earlier, exceeding the 30-minute interval required by SOP-118.",
+      "No injuries occurred. Root cause: permit approval process and equipment maintenance schedule are maintained in separate systems with no automated cross-check, consistent with the gap noted in SOP-118."
+    ]
+  },
+  {
+    id:'doc-oem', title:'OEM Manual Excerpt — CB-204 Blower Model BX-450', type:'OEM Manual', tag:'CB-204',
+    chunks:[
+      "Model BX-450 discharge flange gasket rated service life: 18 months under normal load, or immediate replacement if visual wear exceeds Grade 2 on the OEM wear scale.",
+      "Vibration threshold for scheduled shutdown: 7.5 mm/s RMS sustained over 15 minutes. Below threshold, continued operation with monitoring is permitted."
+    ]
+  },
+  {
+    id:'doc-inspection', title:'Inspection Report — Q1 2026, Unit-3 Rotating Equipment', type:'Inspection Report', tag:'CB-204',
+    chunks:[
+      "CB-204 discharge flange gasket assessed at Grade 2.5 wear (OEM scale) as of 08-Mar-2026 — above the OEM's immediate-replacement threshold of Grade 2. Vibration reading 6.8 mm/s RMS, within threshold but trending upward since Jan 2025.",
+      "Recommendation: schedule gasket replacement within 60 days. Note: any associated maintenance window should be cross-checked against active hot work permits in the GL-12 zone per the gap identified in incident INC-0225."
+    ]
+  }
+];
+
+/* =========================================================
+   KNOWLEDGE GRAPH — nodes & edges
+========================================================= */
+const NODES = [
+  {id:'facility', label:'Unit-3 Coke Oven Battery', sub:'FACILITY ZONE', type:'facility', x:450, y:60,
+   desc:'The hazard zone containing the coke oven gas blower, gas line and isolation valve referenced across every document in this corpus.',
+   sources:['doc-pid']},
+  {id:'cb204', label:'CB-204', sub:'GAS BLOWER', type:'equipment', x:230, y:190,
+   desc:'Coke oven gas blower, model BX-450. Under a maintenance window at the time of the Feb 2025 near-miss; flagged again in the Q1 2026 inspection for gasket wear above OEM threshold.',
+   sources:['doc-maint','doc-oem','doc-inspection']},
+  {id:'gl12', label:'GL-12', sub:'GAS LINE', type:'equipment', x:450, y:190,
+   desc:'Coke oven gas line running 11m from CB-204 to isolation valve V-45. Sits inside the 15m hazard radius defined by SOP-118.',
+   sources:['doc-pid']},
+  {id:'v45', label:'V-45', sub:'ISOLATION VALVE', type:'equipment', x:660, y:190,
+   desc:'Manually operated isolation valve on GL-12. No remote shutoff installed as of the latest drawing revision.',
+   sources:['doc-pid']},
+  {id:'inspection', label:'Q1 2026 Inspection', sub:'FLAGGED FINDING', type:'incident', x:150, y:320,
+   desc:'Found CB-204 gasket wear at Grade 2.5 — above the OEM immediate-replacement threshold of Grade 2. Recommends replacement within 60 days and cross-checking any maintenance window against active permits.',
+   sources:['doc-inspection']},
+  {id:'maintwin', label:'Maintenance Window', sub:'20-FEB-2025, 09:00–13:00', type:'equipment', x:320, y:330,
+   desc:'Planned CB-204 bearing lubrication window. Blower was in reduced-load mode, not fully isolated, during this period — the same window in which the near-miss occurred.',
+   sources:['doc-maint']},
+  {id:'incident', label:'Near-Miss INC-0225', sub:'20-FEB-2025', type:'incident', x:490, y:330,
+   desc:'Gas alarm triggered at 22% LEL during a hot work permit active 9m from GL-12, overlapping CB-204\'s maintenance window. Root cause: no automated cross-check between permit approval and equipment maintenance schedules.',
+   sources:['doc-incident']},
+  {id:'sop118', label:'SOP-118', sub:'HOT WORK / ENTRY PROCEDURE', type:'procedure', x:450, y:450,
+   desc:'Governs hot work and confined space entry near gas lines. Requires gas testing every 30 minutes within 15m of a gas line, but does not require checking equipment maintenance schedules before permit approval.',
+   sources:['doc-sop']},
+  {id:'oisd118', label:'OISD-STD-118', sub:'REGULATORY STANDARD', type:'regulation', x:690, y:450,
+   desc:'Requires continuous gas monitoring during any maintenance, hot work, or entry activity in a coke oven battery zone, and requires permit systems to account for concurrent maintenance on equipment in the same hazard zone.',
+   sources:['doc-oisd']}
+];
+
+const EDGES = [
+  {from:'facility', to:'cb204'}, {from:'facility', to:'gl12'}, {from:'facility', to:'v45'},
+  {from:'cb204', to:'gl12'}, {from:'gl12', to:'v45'},
+  {from:'cb204', to:'inspection'}, {from:'cb204', to:'maintwin'},
+  {from:'maintwin', to:'incident'}, {from:'gl12', to:'incident'},
+  {from:'incident', to:'sop118'}, {from:'sop118', to:'oisd118', gap:true, label:'GAP'}
+];
+
+const NODE_COLORS = {
+  facility:'#5C8A6B', equipment:'#4A93BE', procedure:'#8B7EC8', regulation:'#6E7880', incident:'#D98E3F'
+};
+
+const COMPLIANCE_ROWS = [
+  {proc:'SOP-118 — Hot Work / Entry Permit', req:'OISD-STD-118: permit system must account for concurrent maintenance activity in the same hazard zone', status:'gap',
+   evidence:'INC-0225 near-miss; permit approved without checking CB-204 maintenance window'},
+  {proc:'SOP-118 — Gas Testing Interval', req:'OISD-STD-118: continuous or interval gas monitoring during activity near gas lines', status:'ok',
+   evidence:'30-minute interval defined and generally followed; single interval breach recorded in INC-0225 (34 min)'},
+  {proc:'CB-204 Maintenance Scheduling', req:'OEM manual: gasket replacement at Grade 2 wear or 18-month service life', status:'gap',
+   evidence:'Q1 2026 inspection found Grade 2.5 wear, exceeding replacement threshold; replacement scheduled but not yet executed'}
+];
+
+/* =========================================================
+   NAV
+========================================================= */
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('view-'+item.dataset.view).classList.add('active');
+  });
+});
+
+/* =========================================================
+   RETRIEVAL — simple keyword overlap scoring across chunks
+========================================================= */
+const STOPWORDS = new Set(['the','is','a','an','and','or','of','to','in','on','for','with','was','were','are','it','at','by','be','as','that','this','has','have','did','does','do','what','why','when','which','our','we','current','currently']);
+
+function tokenize(str){
+  return str.toLowerCase().replace(/[^a-z0-9\-]+/g,' ').split(' ').filter(w=>w.length>1 && !STOPWORDS.has(w));
+}
+
+function retrieve(query, topN=4){
+  const qTokens = tokenize(query);
+  const scored = [];
+  DOCS.forEach(doc=>{
+    doc.chunks.forEach((chunk, idx)=>{
+      const cTokens = tokenize(chunk);
+      let score = 0;
+      qTokens.forEach(qt=>{
+        if(cTokens.includes(qt)) score += 1;
+        if(doc.tag && doc.tag.toLowerCase().replace('-','') === qt.replace('-','')) score += 3;
+      });
+      if(score>0) scored.push({doc, chunk, idx, score});
+    });
+  });
+  scored.sort((a,b)=>b.score-a.score);
+  return scored.slice(0, topN);
+}
+
+/* =========================================================
+   CHAT
+========================================================= */
+const chatLog = document.getElementById('chat-log');
+const chatInput = document.getElementById('chat-input');
+const chatSend = document.getElementById('chat-send');
+
+function addMessage(role, html, meta){
+  const wrap = document.createElement('div');
+  wrap.className = 'msg '+role;
+  wrap.innerHTML = `${meta?`<div class="msg-meta">${meta}</div>`:''}<div class="msg-bubble">${html}</div>`;
+  chatLog.appendChild(wrap);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return wrap;
+}
+
+function nowTime(){
+  const d = new Date();
+  return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+async function askCopilot(question){
+  addMessage('user', escapeHtml(question), 'YOU · '+nowTime());
+  const typingWrap = addMessage('bot', '<div class="typing"><span></span><span></span><span></span></div>', 'NEXUS COPILOT · retrieving sources…');
+  chatSend.disabled = true;
+
+  const hits = retrieve(question, 4);
+  const contextBlock = hits.map((h,i)=>`[Source ${i+1}: ${h.doc.title} (${h.doc.type})]\n${h.chunk}`).join('\n\n');
+
+  const systemPrompt = `You are NEXUS-OT, an industrial knowledge copilot for a steel plant's coke oven battery unit. Answer ONLY using the provided source excerpts below — do not invent facts not present in them. Be concise (3-6 sentences), operational, and direct, as if speaking to a safety or maintenance engineer. If the sources reveal a safety or compliance gap, state it plainly. At the end, do not repeat citations in text — they will be shown separately.
+
+SOURCE EXCERPTS:
+${contextBlock || 'No matching sources found in the corpus.'}`;
+
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: "user", content: question }]
+      })
+    });
+    const data = await response.json();
+    const textBlocks = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    const answer = textBlocks || "I couldn't generate a grounded answer from the available sources.";
+
+    const citeHtml = hits.length ? `<div class="citations">${hits.map((h,i)=>{
+      const flagged = h.doc.id==='doc-incident' || h.doc.id==='doc-inspection';
+      return `<span class="cite ${flagged?'flagged':''}" data-doc="${h.doc.id}">[${i+1}] ${h.doc.title}</span>`;
+    }).join('')}</div>` : '';
+
+    typingWrap.querySelector('.msg-bubble').innerHTML = escapeHtml(answer).replace(/\n/g,'<br>') + citeHtml;
+    typingWrap.querySelector('.msg-meta').textContent = 'NEXUS COPILOT · '+nowTime()+' · '+hits.length+' source(s) retrieved';
+
+    typingWrap.querySelectorAll('.cite').forEach(el=>{
+      el.addEventListener('click', ()=>openDrawer(el.dataset.doc));
+    });
+  }catch(err){
+    typingWrap.querySelector('.msg-bubble').innerHTML = "Connection to the reasoning engine failed. This can happen if the network sandbox blocks api.anthropic.com — the retrieval layer above still found "+hits.length+" relevant source(s), shown below.";
+    const citeHtml = hits.length ? `<div class="citations">${hits.map((h,i)=>`<span class="cite" data-doc="${h.doc.id}">[${i+1}] ${h.doc.title}</span>`).join('')}</div>` : '';
+    typingWrap.querySelector('.msg-bubble').innerHTML += citeHtml;
+    typingWrap.querySelectorAll('.cite').forEach(el=>{
+      el.addEventListener('click', ()=>openDrawer(el.dataset.doc));
+    });
+  }finally{
+    chatSend.disabled = false;
+  }
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+chatSend.addEventListener('click', ()=>{
+  const q = chatInput.value.trim();
+  if(!q) return;
+  chatInput.value='';
+  askCopilot(q);
+});
+chatInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); chatSend.click(); }
+});
+document.querySelectorAll('.sugg').forEach(s=>{
+  s.addEventListener('click', ()=>askCopilot(s.dataset.q));
+});
+
+/* seed with one example exchange so the demo has content on load */
+window.addEventListener('DOMContentLoaded', ()=>{
+  addMessage('bot', 'Ask me anything about equipment history, incidents, procedures or compliance across the indexed corpus — try one of the suggestions below, or ask your own question.', 'NEXUS COPILOT · '+nowTime());
+});
+
+/* =========================================================
+   SOURCE DRAWER
+========================================================= */
+const drawer = document.getElementById('drawer');
+function openDrawer(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if(!doc) return;
+  document.getElementById('drawer-title').textContent = doc.title;
+  document.getElementById('drawer-sub').textContent = doc.type.toUpperCase()+' · TAG: '+doc.tag;
+  document.getElementById('drawer-body').innerHTML = doc.chunks.map(c=>`<p>${escapeHtml(c)}</p>`).join('');
+  drawer.classList.add('open');
+}
+document.getElementById('drawer-close').addEventListener('click', ()=>drawer.classList.remove('open'));
+
+/* =========================================================
+   GRAPH RENDER
+========================================================= */
+const svg = document.getElementById('graph-svg');
+const svgNS = 'http://www.w3.org/2000/svg';
+
+function nodeById(id){ return NODES.find(n=>n.id===id); }
+
+function renderGraph(){
+  svg.innerHTML='';
+  // edges first
+  EDGES.forEach(e=>{
+    const a = nodeById(e.from), b = nodeById(e.to);
+    const line = document.createElementNS(svgNS,'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+    line.setAttribute('class', 'gedge'+(e.gap?' gap':''));
+    svg.appendChild(line);
+    if(e.label){
+      const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+      const t = document.createElementNS(svgNS,'text');
+      t.setAttribute('x', mx+8); t.setAttribute('y', my-4);
+      t.setAttribute('class','gedge-label'); t.textContent = e.label;
+      svg.appendChild(t);
+    }
+  });
+  // nodes
+  NODES.forEach(n=>{
+    const g = document.createElementNS(svgNS,'g');
+    g.setAttribute('class','gnode');
+    g.setAttribute('transform', `translate(${n.x},${n.y})`);
+
+    if(n.type==='incident'){
+      const ring = document.createElementNS(svgNS,'circle');
+      ring.setAttribute('class','pulse-ring'); ring.setAttribute('r','14');
+      g.appendChild(ring);
+    }
+
+    const circle = document.createElementNS(svgNS,'circle');
+    circle.setAttribute('r', n.type==='facility' ? 20 : 16);
+    circle.setAttribute('fill', NODE_COLORS[n.type]+'33');
+    circle.setAttribute('stroke', NODE_COLORS[n.type]);
+    g.appendChild(circle);
+
+    const label = document.createElementNS(svgNS,'text');
+    label.setAttribute('x', 0); label.setAttribute('y', n.type==='facility'?36:32);
+    label.setAttribute('text-anchor','middle');
+    label.textContent = n.label;
+    g.appendChild(label);
+
+    const sub = document.createElementNS(svgNS,'text');
+    sub.setAttribute('x', 0); sub.setAttribute('y', n.type==='facility'?48:44);
+    sub.setAttribute('text-anchor','middle');
+    sub.setAttribute('class','sub');
+    sub.textContent = n.sub;
+    g.appendChild(sub);
+
+    g.addEventListener('click', ()=>selectNode(n.id));
+    svg.appendChild(g);
+  });
+}
+
+function selectNode(id){
+  const n = nodeById(id);
+  const connected = EDGES.filter(e=>e.from===id||e.to===id).map(e=>{
+    const otherId = e.from===id ? e.to : e.from;
+    return {node: nodeById(otherId), gap: e.gap};
+  });
+  const detail = document.getElementById('graph-detail');
+  detail.innerHTML = `
+    <h3>${n.label}</h3>
+    <div class="type-tag">${n.sub}</div>
+    <div class="desc">${n.desc}</div>
+    <div class="links">
+      <h4>Linked entities (${connected.length})</h4>
+      ${connected.map(c=>`<div class="link-item" data-node="${c.node.id}">${c.gap?'⚠ ':''}${c.node.label} <span style="color:var(--text-dimmer);float:right">${c.node.sub}</span></div>`).join('')}
+    </div>
+    <div class="links">
+      <h4>Source documents</h4>
+      ${n.sources.map(sid=>{
+        const d = DOCS.find(x=>x.id===sid);
+        return `<div class="link-item" data-doc="${sid}">${d.title}</div>`;
+      }).join('')}
+    </div>
+  `;
+  detail.querySelectorAll('.link-item[data-node]').forEach(el=>{
+    el.addEventListener('click', ()=>selectNode(el.dataset.node));
+  });
+  detail.querySelectorAll('.link-item[data-doc]').forEach(el=>{
+    el.addEventListener('click', ()=>openDrawer(el.dataset.doc));
+  });
+}
+
+renderGraph();
+
+/* =========================================================
+   COMPLIANCE TABLE
+========================================================= */
+const compTable = document.getElementById('comp-table');
+compTable.innerHTML = `
+  <thead><tr><th>Procedure</th><th>Regulatory Requirement</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    ${COMPLIANCE_ROWS.map(r=>`
+      <tr>
+        <td class="proc">${r.proc}</td>
+        <td>${r.req}</td>
+        <td><span class="status-chip ${r.status}">${r.status==='gap'?'GAP':'COMPLIANT'}</span></td>
+        <td>${r.evidence}</td>
+      </tr>
+    `).join('')}
+  </tbody>
+`;
+</script>
+</body>
+</html>
