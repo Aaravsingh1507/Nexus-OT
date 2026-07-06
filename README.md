@@ -1,7 +1,5 @@
 # NEXUS-OT — Unified Asset & Operations Brain
 
-> **ET AI Hackathon 2026 — Problem Statement 8: AI for Industrial Knowledge Intelligence**
-
 NEXUS-OT is a working prototype of an industrial knowledge intelligence platform. It unifies
 maintenance logs, engineering drawings (P&IDs), safety SOPs, regulatory guidance, incident
 reports and OEM manuals into one queryable, cross-linked knowledge layer — so that a question
