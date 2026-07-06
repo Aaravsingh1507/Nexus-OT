@@ -1,0 +1,19 @@
+{
+  "name": "nexus-ot",
+  "version": "1.0.0",
+  "description": "NEXUS-OT — Unified Asset & Operations Brain for industrial knowledge intelligence",
+  "private": true,
+  "scripts": {
+    "start": "npx -y serve@latest -l 3000",
+    "dev": "npx -y serve@latest -l 3000 --no-clipboard"
+  },
+  "keywords": [
+    "industrial-ai",
+    "knowledge-graph",
+    "rag",
+    "compliance",
+    "hackathon"
+  ],
+  "author": "Aarav Singh",
+  "license": "MIT"
+}
